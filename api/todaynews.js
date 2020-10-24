@@ -1,9 +1,11 @@
 const news = require("../model/news");
-const {} = require('../utils/time');
+const tc = require("../utils/time");
 module.exports = async (req, res) => {
-  console.info(Date.now());
+  const { leftvalue, rightvalue } = tc();
   try {
-    let newsCount = await news.countDocuments({});
+    let newsCount = await news.countDocuments({
+      ctime: { $gte: leftvalue, $lt: rightvalue },
+    });
     res.status(200).json({ data: newsCount, msg: "获取当日新闻数量" });
   } catch (e) {
     console.info(e);

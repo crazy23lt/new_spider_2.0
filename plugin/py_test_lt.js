@@ -37,160 +37,147 @@ const timefilter = function (str) {
     return ret;
   }
 };
-const MANX_TT = function (cb) {
+const MANX_TT = async function () {
   const hrefs = [];
   for (let i = 1; i <= 7; i++) {
     hrefs.push(axios.get(`http://www.jiche.com/topic/ManxTT_${i}.html`));
   }
-  axios.all(hrefs).then(
+  let htmlList = await axios.all(hrefs).then(
     axios.spread(function () {
-      const ALLHREF = [];
-      [...arguments].map((data) => {
-        const $ = cheerio.load(data.data, { decodeEntities: false }); // 解析列表
-        let newsList = $(".mix-col1-hd a");
-        let hrefs = [];
-        Object.values(newsList).map((item) => {
-          hrefs.push($(item).attr("href"));
-        });
-        hrefs.splice(10, 4);
-        ALLHREF.push(hrefs.map((item) => axios.get(item)));
-      });
-      axios.all(ALLHREF.flat()).then(
-        axios.spread(function () {
-          [...arguments].map(async (data) => {
-            const $ = cheerio.load(data.data, { decodeEntities: false }); // 解析列表
-            let source = $(".article-info")
-              .text()
-              .trim()
-              .split(" ")
-              .reverse()[1]
-              .trim()
-              .split("   ")[0]
-              .trim();
-            await new newsModel({
-              title: $("h1").text().trim(),
-              context: $(".article-content").html().trim(),
-              time: timefilter($(".article-info").text().trim().split(" ")[0]),
-              type: "曼岛TT",
-              source: source,
-              url: data.config.url,
-              img: $(".article-content").find("img").attr("src"),
-            }).save();
-          });
-          cb();
-        })
-      );
+      return arguments;
     })
   );
-};
-const NBA_NEWS = function () {
-  axios.get("http://sports.sina.com.cn/nba/").then((data) => {
-    var $ = cheerio.load(data.data, { decodeEntities: false }); // 解析列表
-    let newsList = $(".news-list-b .item a");
+  const ALLHREF = [];
+  [...htmlList].map((data) => {
+    const $ = cheerio.load(data.data, { decodeEntities: false }); // 解析列表
+    let newsList = $(".mix-col1-hd a");
     let hrefs = [];
     Object.values(newsList).map((item) => {
       hrefs.push($(item).attr("href"));
     });
-    hrefs.splice(33, 6);
-    let reqArr = [];
-    hrefs.map((href) => {
-      reqArr.push(axios.get(href));
-    });
-    axios.all(reqArr).then(
-      axios.spread(function () {
-        [...arguments].map((page) => {
-          const $2 = cheerio.load(page.data, { decodeEntities: false });
-          var news = new newsModel({
-            title: $2("h1").text().trim(),
-            context: $2("#artibody").html().trim(),
-            time: timefilter($2(".date").text().trim()),
-            type: "NBA体育",
-            source: $2(".ent-source").text(),
-            url: page.config.url,
-            img: $2(".img_wrapper").find("img").attr("src"),
-          });
-          news.save();
-        });
-      })
-    );
+    hrefs.splice(10, 4);
+    ALLHREF.push(hrefs.map((item) => axios.get(item)));
   });
-};
-const STOCK_NEWS = function () {
-  axios.get("http://finance.ifeng.com/stock/").then((data) => {
-    //列表页
-    var $ = cheerio.load(data.data, { decodeEntities: false }); // 解析列表
-    var lias = $(".stock_news-38kZ6a7Q").find("a"); //在列表中找a
-
-    for (let i = 0; i < lias.length; i++) {
-      // 遍历a
-      var href = $(lias[i]).attr("href"); //取a中的href
-
-      axios.get("http:" + href).then((data2) => {
-        // 获取一篇文章的详情
-        var $2 = cheerio.load(data2.data, { decodeEntities: false });
-        console.info();
-        //解析需要的数据,入库
-        var news = new newsModel({
-          title: $2("h1").html(),
-          context: $2(".main_content-r5RGqegj").html(),
-          time: timefilter(
-            $2(".time-1Mgp9W-1").find("span").text().trim().split("来源")[0]
-          ),
-          type: "股票",
-          source: $2(".source-qK4Su0--").text(),
-          url: "http:" + href,
-          img: $2(".text-3w2e3DBc").find("img").attr("src")
-            ? $2(".text-3w2e3DBc").find("img").attr("src")
-            : "none",
-        });
-
-        news.save((err, newsinfo) => {});
-      });
-    }
-  });
-};
-const GLOBAL_NEWS = function () {
-  axios
-    .get(
-      "https://interface.sina.cn/news/get_news_by_channel_new_v2018.d.html?cat_1=51923&show_num=100&level=1,2&last_time=1603088351&_=1603089733345"
-    )
-    .then(({ data }) => {
-      let reqArr = [];
-      let pageInfo = [];
-      data["result"]["data"].map((item) => {
-        reqArr.push(axios.get(item.url));
-        pageInfo.push({
-          title: item.title,
-          url: item.url,
-          img: item.img,
-          media_name: item.media_name,
-        });
-      });
-      axios
-        .all(reqArr)
-        .then(
-          axios.spread(function () {
-            [...arguments].map((page, index) => {
-              const $1 = cheerio.load(page.data, { decodeEntities: false });
-              let time = $1(".date-source .date")
-                ? $1(".date-source .date").text().split("作者")[0]
-                : $1(".swpt-time").text();
-              let article = $1(".article").html().trim();
-              new newsModel({
-                title: pageInfo[index].title,
-                context: article,
-                time: timefilter(time),
-                type: "国际新闻",
-                source: pageInfo[index].media_name,
-                url: pageInfo[index].url,
-                img: pageInfo[index].img,
-              }).save();
-            });
-          })
-        )
-        .catch((e) => console.info(e));
+  let htmlList2 = await axios.all(ALLHREF.flat()).then(
+    axios.spread(function () {
+      return arguments;
     })
-    .catch((e) => console.info(e));
+  );
+  [...htmlList2].map(async (data) => {
+    const $ = cheerio.load(data.data, { decodeEntities: false }); // 解析列表
+    let source = $(".article-info")
+      .text()
+      .trim()
+      .split(" ")
+      .reverse()[1]
+      .trim()
+      .split("   ")[0]
+      .trim();
+    await new newsModel({
+      title: $("h1").text().trim(),
+      context: $(".article-content").html().trim(),
+      time: timefilter($(".article-info").text().trim().split(" ")[0]),
+      type: "曼岛TT",
+      source: source,
+      url: data.config.url,
+      img: $(".article-content").find("img").attr("src"),
+    }).save();
+  });
+};
+const NBA_NEWS = async function () {
+  let { data } = await axios.get("http://sports.sina.com.cn/nba/");
+  var $ = cheerio.load(data, { decodeEntities: false }); // 解析列表
+  let newsList = $(".news-list-b .item a");
+  let hrefs = [];
+  Object.values(newsList).map((item) => {
+    hrefs.push($(item).attr("href"));
+  });
+  hrefs.splice(33, 6);
+  let reqArr = [];
+  hrefs.map((href) => {
+    reqArr.push(axios.get(href));
+  });
+  let arg = await axios.all(reqArr).then(
+    axios.spread(function () {
+      return arguments;
+    })
+  );
+  [...arg].map(async (page) => {
+    const $2 = cheerio.load(page.data, { decodeEntities: false });
+    await new newsModel({
+      title: $2("h1").text().trim(),
+      context: $2("#artibody").html().trim(),
+      time: timefilter($2(".date").text().trim()),
+      type: "NBA体育",
+      source: $2(".ent-source").text(),
+      url: page.config.url,
+      img: $2(".img_wrapper").find("img").attr("src"),
+    }).save();
+  });
+};
+const STOCK_NEWS = async function () {
+  let { data } = await axios.get("http://finance.ifeng.com/stock/");
+  //列表页
+  var $ = cheerio.load(data, { decodeEntities: false }); // 解析列表
+  var lias = $(".stock_news-38kZ6a7Q").find("a"); //在列表中找a
+  for (let i = 0; i < lias.length; i++) {
+    // 遍历a
+    var href = $(lias[i]).attr("href"); //取a中的href
+    let { data } = await axios.get("http:" + href);
+    // 获取一篇文章的详情
+    var $2 = cheerio.load(data, { decodeEntities: false });
+    //解析需要的数据,入库
+    await new newsModel({
+      title: $2("h1").html(),
+      context: $2(".main_content-r5RGqegj").html(),
+      time: timefilter(
+        $2(".time-1Mgp9W-1").find("span").text().trim().split("来源")[0]
+      ),
+      type: "股票",
+      source: $2(".source-qK4Su0--").text(),
+      url: "http:" + href,
+      img: $2(".text-3w2e3DBc").find("img").attr("src")
+        ? $2(".text-3w2e3DBc").find("img").attr("src")
+        : "none",
+    }).save();
+  }
+};
+const GLOBAL_NEWS = async function () {
+  let { data } = await axios.get(
+    "https://interface.sina.cn/news/get_news_by_channel_new_v2018.d.html?cat_1=51923&show_num=100&level=1,2&last_time=1603088351&_=1603089733345"
+  );
+  let reqArr = [];
+  let pageInfo = [];
+  data.result.data.map((item) => {
+    reqArr.push(axios.get(item.url));
+    pageInfo.push({
+      title: item.title,
+      url: item.url,
+      img: item.img,
+      media_name: item.media_name,
+    });
+  });
+  let arg = await axios.all(reqArr).then(
+    axios.spread(function () {
+      return arguments;
+    })
+  );
+  [...arg].map(async (page, index) => {
+    const $1 = cheerio.load(page.data, { decodeEntities: false });
+    let time = $1(".date-source .date")
+      ? $1(".date-source .date").text().split("作者")[0]
+      : $1(".swpt-time").text();
+    let article = $1(".article").html().trim();
+    await new newsModel({
+      title: pageInfo[index].title,
+      context: article,
+      time: timefilter(time),
+      type: "国际新闻",
+      source: pageInfo[index].media_name,
+      url: pageInfo[index].url,
+      img: pageInfo[index].img,
+    }).save();
+  });
 };
 const CSGO_NEWS = function () {
   const reqArr = [];

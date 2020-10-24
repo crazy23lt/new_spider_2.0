@@ -1,36 +1,63 @@
-// const { NBA_NEWS, STOCK_NEWS, MANX_TT, GLOBAL_NEWS } = require("./py_test_lt");
+const { MANX_TT } = require("./py_test_lt");
+//STOCK_NEWS, NBA_NEWS, GLOBAL_NEWS
+/**
+ * 爬虫功能需求
+ *  1. 一键启动所有爬虫
+ *  2. 单独启动爬虫
+ */
 
-const spider_home = new Map();
-spider_home.set(
-  {
-    name: "NBA_NEWS",
-    timer: null,
-    fn: () => console.info(`NBA_NEWS`),
-  },
-  false
-);
-spider_home.set(
-  {
-    name: "STOCK_NEWS",
-    timer: null,
-    fn: () => console.info(`STOCK_NEWS`),
-  },
-  false
-);
-spider_home.set(
-  {
-    name: "MANX_TT",
-    timer: null,
-    fn: () => console.info(`MANX_TT`),
-  },
-  false
-);
-spider_home.set(
-  {
-    name: "GLOBAL_NEWS",
-    timer: null,
-    fn: () => console.info(`GLOBAL_NEWS`),
-  },
-  false
-);
-module.exports = { spider_home };
+// class EventEmitter {
+//   constructor() {
+//     this.subs = Object.create(null);
+//   }
+//   $on(eventType, handler) {
+//     this.subs[eventType] = this.subs[eventType] || new Map();
+//     this.subs[eventType].set(handler, true);
+//   }
+//   $emit(eventType) {
+//     if (this.subs[eventType]) {
+//       this.subs[eventType].forEach(async (flag, handler) => {
+//         if (flag) {
+//           await handler();
+//         }
+//       });
+//     }
+//   }
+//   $changeFlag(eventType, handler) {
+//     if (this.subs[eventType]) {
+//       let newFlag = this.subs[eventType].get(handler);
+//       this.subs[eventType].set(handler, !newFlag);
+//     }
+//   }
+// }
+const EventEmitter = function () {
+  this.subs = Object.create(null);
+};
+EventEmitter.prototype.$on = function (eventType, handler) {
+  this.subs[eventType] = this.subs[eventType] || new Map();
+  this.subs[eventType].set(handler, true);
+};
+EventEmitter.prototype.$emit = async function (eventType) {
+  if (this.subs[eventType]) {
+    this.subs[eventType].forEach(async (flag, handler) => {
+      if (flag) {
+        await handler();
+      }
+    });
+  }
+};
+EventEmitter.prototype.$changeFlag = function (eventType, handler) {
+  if (this.subs[eventType]) {
+    let newFlag = this.subs[eventType].get(handler);
+    this.subs[eventType].set(handler, !newFlag);
+  }
+};
+
+const em = new EventEmitter();
+// 订阅 爬虫 函数
+em.$on("spider", MANX_TT);
+// 改变爬虫状态
+// em.$changeFlag("spider", MANX_TT);
+// 发布 爬虫 事件
+// em.$emit("spider");
+module.exports = em;

@@ -1,10 +1,10 @@
 const news = require("../model/news");
 module.exports = async (req, res) => {
-  const { pagenum = 1, pagesize = 20 } = req.query;
+  const { pagenum = 1, pagesize = 20 } = req.body;
   try {
-    let newsCount = await news.count();
+    let newsCount = await news.countDocuments();
     let newsSize = await news
-      .find({}, { _id: 0, __v: 0, img: 0, context: 0 })
+      .find({}, { __v: 0, img: 0, context: 0 })
       .limit(pagesize - 0)
       .skip((pagenum - 1) * pagesize);
     res
